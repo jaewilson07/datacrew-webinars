@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- This head section loads Domo runtime support first, then fonts, app styles, and the deferred app controller script. -->
+  <meta charset="utf-8" />
+  <title>DEMO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Domo runtime (SRI + CORS) -->
+  <script src="https://unpkg.com/ryuu.js@4.6.0/dist/domo.js" integrity="sha384-YYsd9wQ+wDlUWhvpfGdptxmNYIqBC+52oJtWgPKJadbs3sSFTY/+ZotPbEHTTRWz" crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@450;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="app.css" />
+  <script defer src="app.js"></script>
+</head>
+<body class="is-loading">
+  <!-- This splash screen is shown while config, metrics, references, and Tier 3 memory are loaded. -->
+  <div id="appSplash" class="app-splash" role="status" aria-live="polite">
+    <div class="app-splash__inner">
+      <div class="app-splash__title">DEMO</div>
+      <div class="app-splash__loader" aria-hidden="true"><span></span></div>
+      <div id="appSplashStatus" class="app-splash__status">Preparing References</div>
+    </div>
+  </div>
+
+  <!-- This main shell holds the reference catalog on the left and the chat workspace on the right. -->
+  <main class="demo-shell" aria-label="DEMO Chatbot Interface">
+    <header class="demo-header">
+      <div>
+        <p class="eyebrow">555 Fulfillment Robotics</p>
+        <h1>DEMO</h1>
+      </div>
+      <div class="header-actions" aria-label="Playbook Controls">
+        <div id="llmStatusGauge" class="llm-gauge is-neutral" title="LLM status: idle" aria-live="polite">
+          <span class="llm-gauge__dot" aria-hidden="true"></span>
+          <span id="llmStatusText" class="llm-gauge__text">LLM Idle</span>
+        </div>
+        <button type="button" id="playbooksButton" class="primary-button">Playbooks</button>
+      </div>
+    </header>
+
+    <section class="workspace-grid">
+      <!-- This panel exposes exact metric, lookup, and transaction references that can be inserted into the prompt. -->
+      <aside id="referencesPanel" class="references-panel" aria-label="References">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Resources</p>
+            <h2>References</h2>
+          </div>
+          <button type="button" id="refreshReferencesButton" class="icon-button" aria-label="Refresh References"><span aria-hidden="true">↻</span></button>
+        </div>
+        <p class="panel-copy">Insert exact metric, lookup, and transaction filters into the model context.</p>
+        <label class="search-label" for="referenceSearch">Filter References</label>
+        <input id="referenceSearch" class="search-input" type="search" placeholder="Search facilities, metrics, shifts..." autocomplete="off" />
+        <div class="reference-tabs" role="tablist" aria-label="Reference Categories">
+          <button type="button" class="reference-tab is-active" data-category="metrics">Metrics</button>
+          <span class="reference-tab-divider" aria-hidden="true">|</span>
+          <button type="button" class="reference-tab" data-category="facility">Facility</button>
+          <button type="button" class="reference-tab" data-category="facilityStatus">Facility Status</button>
+          <button type="button" class="reference-tab" data-category="robotClass">Robot Class</button>
+          <button type="button" class="reference-tab" data-category="shift">Shift</button>
+          <button type="button" class="reference-tab" data-category="task">Task</button>
+          <button type="button" class="reference-tab" data-category="sourceSystem">Source System</button>
+        </div>
+        <div id="referenceStatus" class="reference-status">Loading Reference Values…</div>
+        <div id="referenceList" class="reference-list" role="list"></div>
+      </aside>
+
+      <!-- This workspace contains model-tier controls, the transcript, and the editable prompt composer. -->
+      <section class="chat-panel" aria-label="Collaborative Workspace">
+        <div class="chat-window">
+          <div class="chat-window__head">
+            <div>
+              <p class="eyebrow">Model Tier</p>
+              <h2>Collaborative Workspace</h2>
+            </div>
+            <div class="mode-switch" aria-label="Demo Mode Selector">
+              <button type="button" class="mode-button" data-tier="tier1" aria-pressed="false">Tier 1</button>
+              <button type="button" class="mode-button" data-tier="tier2" aria-pressed="false">Tier 2</button>
+              <button type="button" class="mode-button is-active" data-tier="tier3" aria-pressed="true">Tier 3</button>
+            </div>
+          </div>
+          <div id="chatTranscript" class="chat-transcript" aria-live="polite">
+            <article class="message message--assistant">
+              <div class="message__avatar">D</div>
+              <div class="message__body">
+                <p class="message__meta">DEMO</p>
+                <p>Hello! What operations data can I help you discover today?</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- This composer accepts plain language and inline structured reference tokens before submission. -->
+        <form class="composer" aria-label="Prompt Composer">
+          <div class="composer__topline"><label for="composerInput">Prompt DEMO</label></div>
+          <div id="composerInput" class="composer-input" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Prompt Text With Reference Tags" data-placeholder="Enter your prompt..."></div>
+          <div class="composer__bottomline">
+            <div id="selectedReferenceCount" class="selected-count">0 References Inserted</div>
+            <div class="composer__actions">
+              <button type="button" id="resetPromptButton" class="ghost-button">Reset</button>
+              <button type="button" id="sendPromptButton" class="primary-button">Send</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <!-- This modal confirms inferred reference tags and playbook matches before the app sends a request. -->
+  <div id="contextConfirmOverlay" class="context-confirm-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="contextConfirmTitle">
+    <section class="context-confirm-card" role="document">
+      <header class="context-confirm-card__head">
+        <div>
+          <p class="eyebrow">Preflight Context</p>
+          <h2 id="contextConfirmTitle">Confirm Matched Context</h2>
+          <p class="context-confirm-card__copy">DEMO found possible context before sending. Use it, or return to the prompt to adjust the request.</p>
+        </div>
+        <button type="button" id="contextConfirmCloseButton" class="modal-close-button" aria-label="Close context confirmation">Close</button>
+      </header>
+
+      <div class="context-confirm-card__body">
+        <div class="context-confirm-prompt">
+          <span class="context-confirm-label">Prompt</span>
+          <p id="contextConfirmPrompt">—</p>
+        </div>
+
+        <section id="contextConfirmReferencesSection" class="context-confirm-section" hidden>
+          <div class="context-confirm-section__head">
+            <span class="context-confirm-label">Potential Reference Tags</span>
+            <span id="contextConfirmReferencesCount" class="context-confirm-count">0</span>
+          </div>
+          <div id="contextConfirmReferencesList" class="context-confirm-list"></div>
+        </section>
+
+        <section id="contextConfirmPatternSection" class="context-confirm-section" hidden>
+          <div class="context-confirm-section__head">
+            <span class="context-confirm-label">Potential Playbook</span>
+            <span id="contextConfirmPatternScore" class="context-confirm-count">—</span>
+          </div>
+          <div id="contextConfirmPatternList" class="context-confirm-list"></div>
+        </section>
+      </div>
+
+      <footer class="context-confirm-card__actions">
+        <button type="button" id="contextConfirmEditButton" class="ghost-button">Edit Before Sending</button>
+        <button type="button" id="contextConfirmUseButton" class="primary-button">Use Matched Context</button>
+      </footer>
+    </section>
+  </div>
+
+</body>
+</html>
