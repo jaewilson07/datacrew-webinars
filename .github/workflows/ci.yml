@@ -1,0 +1,60 @@
+# PUBLIC repo — never set CI_RUNS_ON to a self-hosted runner. A fork PR would
+# run its own code on our machines; GitHub-hosted runners are free here.
+#
+# The one PR/main CI workflow, same shape as jaewilson07/mdrag's ci.yml. This
+# repo is webinar assets (HTML/JS/JSON + images), so the only check is
+# pre-commit; `ci-ok` is the single check branch protection should require.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Superseded PR heads should not occupy runners; every push to main is
+# checked on its own.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & guards
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0 # astral publishes no floating major tag
+        with:
+          enable-cache: true
+          cache-dependency-glob: .pre-commit-config.yaml
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: pre-commit (all hooks, all files)
+        run: uvx pre-commit run --all-files --show-diff-on-failure --color always
+
+  # The only check branch protection should require.
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [lint]
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    steps:
+      - name: All required jobs passed or were skipped
+        env:
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          if [ "$FAILED" = "true" ]; then
+            echo "::error::A CI job failed or was cancelled."
+            exit 1
+          fi

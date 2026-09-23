@@ -1,3 +1,10 @@
+# Pre-commit hooks: https://pre-commit.com
+# Run all: uvx pre-commit run --all-files
+#
+# The single definition of this repo's checks: the `lint` job in
+# .github/workflows/ci.yml runs `pre-commit run --all-files`, so a hook added
+# here is enforced in CI with no workflow edit.
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -7,4 +14,10 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-yaml
+      - id: check-json
       - id: detect-private-key
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
