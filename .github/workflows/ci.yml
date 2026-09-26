@@ -34,7 +34,9 @@ jobs:
 
       - uses: astral-sh/setup-uv@v10.2.0 # astral publishes no floating major tag
         with:
-          enable-cache: true
+          # Self-hosted runners keep uv's cache on a persistent volume (UV_CACHE_DIR);
+          # saving it to the Actions cache would upload gigabytes. Hosted only.
+          enable-cache: ${{ runner.environment == 'github-hosted' }}
           cache-dependency-glob: .pre-commit-config.yaml
 
       - uses: actions/cache@v6
