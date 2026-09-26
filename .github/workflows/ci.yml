@@ -14,10 +14,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Superseded PR heads should not occupy runners; every push to main is
-# checked on its own.
+# Superseded PR heads should not occupy runners. Pushes to main share one
+# group per ref and are never cancelled mid-run, so at most one main run is
+# active and one pending: a newer merge replaces the pending run instead of
+# queueing another full run behind it on the shared self-hosted fleet.
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
