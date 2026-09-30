@@ -42,7 +42,7 @@ jobs:
           domain: "https://infisical.datacrew.space"
           project-slug: "hostinger_vps"
           env-slug: "prod"
-          secret-path: "/claude-code"
+          secret-path: "/claude"
 
       - name: Run Claude Code Review
         id: claude-review
