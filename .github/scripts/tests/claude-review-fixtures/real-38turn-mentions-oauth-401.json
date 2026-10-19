@@ -1,0 +1,1 @@
+[{"type":"result","subtype":"success","is_error":true,"num_turns":38,"total_cost_usd":2.10,"result":"Reviewed the diff; it removes the OAuth refresh and returns 401 on expiry, which is a bug."}]

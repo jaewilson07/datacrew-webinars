@@ -44,8 +44,12 @@ jobs:
           env-slug: "prod"
           secret-path: "/claude"
 
+      # continue-on-error so a tooling failure (usage limit, auth, action startup)
+      # cannot turn the PR red; the next step decides whether it was tooling or a
+      # real review error. Keep this workflow non-required in branch protection.
       - name: Run Claude Code Review
         id: claude-review
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ env.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -54,3 +58,22 @@ jobs:
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
+
+      # Classify a failed action step with .github/scripts/classify-claude-review.sh
+      # (tests: .github/scripts/tests/test-classify-claude-review.sh). Tooling means
+      # the result is is_error, <= 1 turn and $0 (observed 2026-10-14..18). A missing
+      # execution file stays RED: it can't be told apart from permanent misconfiguration
+      # (bad prompt, plugin marketplace, bot actor), and hiding that is worse than a red
+      # non-required check. Infisical fetch failure is a separate step and stays red.
+      - name: Classify claude-review outcome
+        if: ${{ always() && steps.claude-review.outcome == 'failure' }}
+        env:
+          EXEC_FILE: ${{ steps.claude-review.outputs.execution_file }}
+        run: |
+          if kind=$(bash .github/scripts/classify-claude-review.sh "${EXEC_FILE}"); then
+            echo "::warning title=claude-review skipped::tooling failure ($kind); not a review result"
+            echo "claude-review skipped: tooling failure ($kind); not a review result" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "::error::claude-review failed: real review error or no execution file (see the action step log)"
+          exit 1
