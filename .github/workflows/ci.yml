@@ -47,11 +47,24 @@ jobs:
       - name: pre-commit (all hooks, all files)
         run: uvx pre-commit run --all-files --show-diff-on-failure --color always
 
+  test:
+    name: Tests
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0 # astral publishes no floating major tag
+        with:
+          enable-cache: ${{ runner.environment == 'github-hosted' }}
+
+      - name: pytest
+        run: uvx --with pyyaml pytest tests/ -p no:cacheprovider
+
   # The only check branch protection should require.
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [lint]
+    needs: [lint, test]
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     steps:
       - name: All required jobs passed or were skipped
