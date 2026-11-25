@@ -1,61 +1,45 @@
 name: Claude Code
 
+# A caller of the shared @claude mention workflow in datacrew-space/ci-workflows, pinned to a commit
+# SHA (docs: docs/claude-mention.md in that repository). The caller owns the triggers: these four are
+# every event that can summon Claude. Do not add `pull_request_target`: the job holds the Claude token.
+# Add `assigned` to the `issues` types only if an issue assigned with the phrase in it should count.
+#
+# The job checks the phrase and the author itself and ends green without calling Claude otherwise, so
+# a green run does not prove this works: the check is a real reply to an `@claude` mention.
+#
+# PUBLIC repo: no `runs-on` input is passed, so the shared workflow's default (GitHub-hosted
+# ubuntu-latest) applies. Never pass a self-hosted runner here.
+
 on:
   issue_comment:
     types: [created]
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened, assigned]
+    types: [opened]
   pull_request_review:
     types: [submitted]
 
+permissions:
+  contents: read
+
 jobs:
   claude:
-    if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
-    # PUBLIC repo — keep CI_RUNS_ON unset or GitHub-hosted.
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    uses: datacrew-space/ci-workflows/.github/workflows/claude-mention.yml@f838ff0adefdfcfa4924c9f092d23348aff7b8c5
     permissions:
       contents: read
       pull-requests: read
       issues: read
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Fetch Claude Code OAuth token from Infisical
-        uses: Infisical/secrets-action@v1.0.15
-        with:
-          method: "universal"
-          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
-          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          domain: "https://infisical.datacrew.space"
-          project-slug: "hostinger_vps"
-          env-slug: "prod"
-          secret-path: "/claude"
-
-      - name: Run Claude Code
-        id: claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ env.CLAUDE_CODE_OAUTH_TOKEN }}
-
-          # This is an optional setting that allows Claude to read CI results on PRs
-          additional_permissions: |
-            actions: read
-
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
-
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr *)'
+      actions: read
+    with:
+      infisical-domain: "https://infisical.datacrew.space"
+      infisical-project-slug: "hostinger_vps"
+      # infisical-env-slug: prod
+      # infisical-claude-path: /claude
+      # trigger-phrase: "@claude"
+      # allowed-associations: "OWNER,MEMBER,COLLABORATOR"
+    secrets:
+      INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
+      INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}

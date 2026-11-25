@@ -2,8 +2,9 @@
 # run its own code on our machines; GitHub-hosted runners are free here.
 #
 # The one PR/main CI workflow, same shape as jaewilson07/mdrag's ci.yml. This
-# repo is webinar assets (HTML/JS/JSON + images), so the only check is
-# pre-commit; `ci-ok` is the single check branch protection should require.
+# repo is webinar assets (HTML/JS/JSON + images), so the checks are pre-commit
+# (`lint`) and the workflow-shape tests in tests/ (`test`); `ci-ok` is the single
+# check branch protection should require.
 
 name: CI
 
@@ -47,11 +48,24 @@ jobs:
       - name: pre-commit (all hooks, all files)
         run: uvx pre-commit run --all-files --show-diff-on-failure --color always
 
+  test:
+    name: Tests
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0 # astral publishes no floating major tag
+        with:
+          enable-cache: ${{ runner.environment == 'github-hosted' }}
+
+      - name: pytest
+        run: uvx --with 'pyyaml>=6' --with 'pytest>=8' pytest tests/ -p no:cacheprovider
+
   # The only check branch protection should require.
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [lint]
+    needs: [lint, test]
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     steps:
       - name: All required jobs passed or were skipped
