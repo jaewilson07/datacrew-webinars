@@ -44,8 +44,10 @@ def test_claude_yml_is_a_pinned_caller_of_the_shared_mention_workflow():
 
 def test_claude_yml_passes_exactly_the_declared_inputs_and_secrets():
     job = _load()["jobs"]["claude"]
+    # Public repo: no `runs-on` input, so the callee's default (GitHub-hosted ubuntu-latest) applies
+    # and a CI_RUNS_ON variable can never route fork-triggered runs to a self-hosted runner.
+    assert "runs-on" not in job["with"]
     assert job["with"] == {
-        "runs-on": "${{ vars.CI_RUNS_ON || '\"ubuntu-latest\"' }}",
         "infisical-domain": "https://infisical.datacrew.space",
         "infisical-project-slug": "hostinger_vps",
     }

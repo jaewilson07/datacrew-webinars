@@ -8,8 +8,8 @@ name: Claude Code
 # The job checks the phrase and the author itself and ends green without calling Claude otherwise, so
 # a green run does not prove this works: the check is a real reply to an `@claude` mention.
 #
-# PUBLIC repo: never set the repository variable CI_RUNS_ON to a self-hosted runner. A fork PR would
-# run its own code on those machines; GitHub-hosted runners are free here.
+# PUBLIC repo: no `runs-on` input is passed, so the shared workflow's default (GitHub-hosted
+# ubuntu-latest) applies. Never pass a self-hosted runner here.
 
 on:
   issue_comment:
@@ -34,7 +34,6 @@ jobs:
       id-token: write
       actions: read
     with:
-      runs-on: ${{ vars.CI_RUNS_ON || '"ubuntu-latest"' }}
       infisical-domain: "https://infisical.datacrew.space"
       infisical-project-slug: "hostinger_vps"
       # infisical-env-slug: prod

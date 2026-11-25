@@ -2,8 +2,9 @@
 # run its own code on our machines; GitHub-hosted runners are free here.
 #
 # The one PR/main CI workflow, same shape as jaewilson07/mdrag's ci.yml. This
-# repo is webinar assets (HTML/JS/JSON + images), so the only check is
-# pre-commit; `ci-ok` is the single check branch protection should require.
+# repo is webinar assets (HTML/JS/JSON + images), so the checks are pre-commit
+# (`lint`) and the workflow-shape tests in tests/ (`test`); `ci-ok` is the single
+# check branch protection should require.
 
 name: CI
 
@@ -58,7 +59,7 @@ jobs:
           enable-cache: ${{ runner.environment == 'github-hosted' }}
 
       - name: pytest
-        run: uvx --with pyyaml pytest tests/ -p no:cacheprovider
+        run: uvx --with 'pyyaml>=6' --with 'pytest>=8' pytest tests/ -p no:cacheprovider
 
   # The only check branch protection should require.
   ci-ok:
